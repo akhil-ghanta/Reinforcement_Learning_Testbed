@@ -4,8 +4,12 @@ import matplotlib.pyplot as plt
 
 # number of bandit arms
 k = 10
-runs = 10
+runs = 100
 time_steps = 1000
+# define a nonstationary learning rate (closer to 1 means agent is more myopic)
+alpha = 0.8
+# boolean to turn problem nonstationary
+stationary = False
 
 total_ave_reward = np.zeros(time_steps+1)
 # initialize q-table with Q_1 = 0 for all actions
@@ -13,7 +17,7 @@ Q = np.zeros(k)
 # initialize an array to store how many times each action has been called:
 N = np.zeros(k)
 
-# initialize rewards for each action - the mean reward for each action is drawn
+# initialize rewards for each action - the mean reward for each action is drawn (only for stationary case)
 # from gaussian centered at 0 with variance of 1
 reward_means = np.zeros(k)
 for i in range(0,len(reward_means)):
@@ -32,7 +36,10 @@ def policy(epsilon):
 
 def get_reward(action):
     # reward is drawn from gaussian centered at reward_means[action] w/ variance of 1
-    return random.gauss(reward_means[action], 1)
+    if stationary:
+        return random.gauss(reward_means[action], 1)
+    else:
+        return random.gauss(random.gauss(1, 1), 1)
 
 for run in range(0,runs):
     run_ave_reward = np.zeros(time_steps+1)
@@ -46,7 +53,12 @@ for run in range(0,runs):
         # increment total reward for this run
         run_ave_reward[time_step] = (reward_obtained + ((run_ave_reward[time_step - 1])*(time_step - 1)) )/time_step
         # updated Q(a) using resultant reward via our action value estimation method (using sample average here)
-        Q[action] = Q[action] + (1/N[action])*(reward_obtained - Q[action])
+        if stationary:
+            Q[action] = Q[action] + (1/N[action])*(reward_obtained - Q[action])
+        # updating Q(a) using non stationary update
+        else:
+            Q[action] = Q[action] + alpha* (reward_obtained - Q[action])
+
     #print(N)
     #print(run_ave_reward[0:5])
     total_ave_reward = total_ave_reward + run_ave_reward
